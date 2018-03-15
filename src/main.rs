@@ -44,9 +44,14 @@ fn main() {
     let (sheet_width, _) = tilesheet.dimensions();
     let layer = &map.layers[0];
 
-    let mut map_image = image::ImageBuffer::new(
+    let map_size = (
         tile_width * layer.tiles[0].len() as u32,
         tile_height * layer.tiles.len() as u32);
+
+
+    let mut map_image = image::ImageBuffer::new(
+        map_size.0,
+        map_size.1);
 
     for (y, row) in layer.tiles.iter().enumerate() {
         for (x, &tile) in row.iter().enumerate() {
@@ -101,6 +106,12 @@ fn main() {
                         .trans(-pos.x, -pos.y);
 
                     image.draw(&map_image, &Default::default(), trans, g);
+
+                    // draw player
+                    piston_window::rectangle([0.0, 1.0, 0.0, 1.0],
+                                             [-10.0, -30.0, 20.0, 30.0],
+                                             trans.trans(pos.x, pos.y),
+                                             g);
                 }
             });
         }
@@ -111,9 +122,12 @@ fn main() {
                 y: if keyboard_state.contains(&piston_window::Key::Down) {1.0} else {0.0}
                    + if keyboard_state.contains(&piston_window::Key::Up) {-1.0} else {0.0}
             };
-            const SPEED: f64 = 128.0;
+            const SPEED: f64 = 64.0;
             pos.x += dir.x * args.dt * SPEED;
             pos.y += dir.y * args.dt * SPEED;
+
+            pos.x = pos.x.max(10.0).min(f64::from(map_size.0 - 10));
+            pos.y = pos.y.max(0.0).min(f64::from(map_size.1));
             println!("{:?}", pos);
         }
         if let Some(piston_window::Button::Keyboard(key)) = e.press_args() {
