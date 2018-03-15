@@ -1,8 +1,10 @@
 extern crate find_folder;
 extern crate piston_window;
 extern crate tiled;
+extern crate image;
 
 use piston_window::{ImageSize, Transformed, RenderEvent, PressEvent, ReleaseEvent, UpdateEvent};
+use image::GenericImage;
 
 #[derive(Debug)]
 struct Vec2 {
@@ -37,14 +39,43 @@ fn main() {
     let max_height = f64::from(tile_height * 20);
 
     let tilesheet = assets.join(&tileset.images[0].source);
-    let tilesheet = piston_window::Texture::from_path(
+    let mut tilesheet = image::open(tilesheet).unwrap();
+
+    let (sheet_width, _) = tilesheet.dimensions();
+    let layer = &map.layers[0];
+
+    let mut map_image = image::ImageBuffer::new(
+        tile_width * layer.tiles[0].len() as u32,
+        tile_height * layer.tiles.len() as u32);
+
+    for (y, row) in layer.tiles.iter().enumerate() {
+        for (x, &tile) in row.iter().enumerate() {
+            let y = y as u32;
+            let x = x as u32;
+
+            if tile == 0 {
+                continue;
+            }
+
+            let tile = tile - 1;
+
+            map_image.copy_from(
+                &tilesheet.sub_image(
+                (tile % (sheet_width / tile_width) * tile_width),
+                (tile / (sheet_width / tile_height) * tile_height),
+                tile_width,
+                tile_height),
+                x * tile_width,
+                y * tile_height);
+        }
+    }
+
+    let map_image = piston_window::Texture::from_image(
         &mut window.factory,
-        &tilesheet,
-        piston_window::Flip::None,
+        &map_image,
         &piston_window::TextureSettings::new()
         ).unwrap();
-    let (sheet_width, _) = tilesheet.get_size();
-    let layer = &map.layers[0];
+
     let image = piston_window::Image::new();
 
     let mut pos = Vec2 {
@@ -69,32 +100,7 @@ fn main() {
                         .scale(scale, scale)
                         .trans(-pos.x, -pos.y);
 
-                    for (y, row) in layer.tiles.iter().enumerate() {
-                        for (x, &tile) in row.iter().enumerate() {
-                            if tile == 0 {
-                                continue;
-                            }
-
-                            let tile = tile - 1;
-
-                            let src_rect = [
-                                (tile % (sheet_width / tile_width) * tile_width) as f64,
-                                (tile / (sheet_width / tile_height) * tile_height) as f64,
-                                tile_width as f64,
-                                tile_height as f64
-                            ];
-
-                            image.src_rect(src_rect).draw(
-                                &tilesheet,
-                                &Default::default(),
-                                trans.trans(
-                                    x as f64 * tile_width as f64,
-                                    y as f64 * tile_height as f64
-                                    ),
-                                    g
-                                    );
-                        }
-                    }
+                    image.draw(&map_image, &Default::default(), trans, g);
                 }
             });
         }

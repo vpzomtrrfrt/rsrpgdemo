@@ -7,3 +7,4 @@ authors = ["Colin Reeder <vpzomtrrfrt@gmail.com>"]
 tiled = "0.7.3"
 piston_window = "0.77.0"
 find_folder = "0.3.0"
+image = "0.18.0"
